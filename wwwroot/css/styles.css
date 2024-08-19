@@ -1,0 +1,15 @@
+﻿body {
+}
+form{
+    margin: auto;
+    display:flex;
+    flex-direction: column;
+    gap:20px;
+    padding:40px;
+    border: 1px solid #222;
+    width: 300px;
+}
+h4{
+    text-align: center;
+    margin:0;
+}
