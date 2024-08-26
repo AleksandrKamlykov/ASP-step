@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.FileProviders;
+using System.Reflection;
+using System.Text;
 using WebApplication1.Models;
 using WebApplication1.Services;
 
@@ -10,141 +13,124 @@ var app = builder.Build();
 var userService = new UserCervice();
 var fileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
 var template = fileProvider.GetFileInfo("html/index.html");
-var contentTag = "<!-- content -->";
+string templateString = await File.ReadAllTextAsync(template.PhysicalPath);
+string contentTag = "<!--content-->";
+string scriptsTag = "<!--scripts-->";
 
 
 app.UseStaticFiles();
 
-// Default route
-app.MapGet("/",async (context) =>
+
+app.Run(async (context) =>
 {
-
-    var formFile = fileProvider.GetFileInfo("html/form.html");
-
-    var content = await File.ReadAllTextAsync(template.PhysicalPath);
-    content = content.Replace(contentTag, await File.ReadAllTextAsync(formFile.PhysicalPath));
-    if (template.Exists && formFile.Exists)
-    {
-        context.Response.ContentType = "text/html";
-
-        await context.Response.WriteAsync(content);
-    }
-    else
-    {
-        context.Response.StatusCode = StatusCodes.Status404NotFound;
-        await context.Response.WriteAsync("File not found.");
-    }
+    context.Response.ContentType = "text/html; charset=utf-8";
+    context.Response.SendFileAsync(template);
 });
-
-// Get all users
-app.MapGet("/api/customers", async (context) =>
-{
-
-
-    var formFile = fileProvider.GetFileInfo("html/form.html");
-
-    var content = await File.ReadAllTextAsync(template.PhysicalPath);
-
-
-    var tableFile = fileProvider.GetFileInfo("html/table.html");
-    string tableHTML = await File.ReadAllTextAsync(tableFile.PhysicalPath);
-    
-
-    var users =  userService.GetUsers();
-
-    tableHTML = tableHTML.Replace("<!-- table -->", string.Join("", users.Select(u => $"<tr><td>{u.Name}</td><td>{u.Email}</td><td>{u.Phone}</td></tr>")));
-    content = content.Replace(contentTag, tableHTML);
-    
-    if (template.Exists)
-    {
-        context.Response.ContentType = "text/html";
-
-        await context.Response.WriteAsync(content);
-    }
-    else
-    {
-        context.Response.StatusCode = StatusCodes.Status404NotFound;
-        await context.Response.WriteAsync("File not found.");
-    }
-});
-
-// Register user
-app.MapGet("/register", async (context) =>
-{
-
-
-    var query = context.Request.Query;
-    string name = query["name"];
-    string email = query["email"];
-    string phone = query["phone"];
-
-    if (new List<string>(){ name,email,phone}.Contains(String.Empty))
-    {
-        context.Response.StatusCode = StatusCodes.Status404NotFound;
-        await context.Response.WriteAsync("File not found.");
-    }
-
-    var user = new User
-    {
-        Name = name,
-        Email = email,
-        Phone = phone
-    };
-    userService.AddUser(user);
-
-
-    var fileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
-    var content = await File.ReadAllTextAsync(template.PhysicalPath);
-    content = content.Replace(contentTag, "<h1>Registration successful</h1>");
-
-
-
-  
-    context.Response.ContentType = "text/html";
-
-    await context.Response.WriteAsync(content);
- 
-});
-
-// Calculate length of string
-app.MapGet("/api/length/{content}", async (context) =>
-{
-    var content = context.Request.RouteValues["content"]?.ToString();
-    if (content == null)
-    {
-        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await context.Response.WriteAsync("Length parameter is missing.");
-        return;
-    }
-
-    await context.Response.WriteAsync($"Length: {content.Length}; content: {content}");
-});
-
-// Calculate area of circle
-app.MapGet("/api/circlearea", async (context) =>
-{
-
-    int radius = 0;
-    if (!int.TryParse(context.Request.Query["radius"], out radius) || radius <= 0)
-    {
-        context.Response.StatusCode = StatusCodes.Status400BadRequest;
-        await context.Response.WriteAsync("Radius parameter is missing or invalid.");
-        return;
-    }
-
-    double area = Math.PI * Math.Pow(radius, 2);
-    await context.Response.WriteAsync($"Area of circle with radius {radius} is {area}");
-});
-
-// Show all query parameters [key: value]
-app.MapGet("/api/queries", async (context) =>
-{
-
-    var queryParams = context.Request.Query;
-    string response = string.Join("\n", queryParams.Select(q => $"{q.Key}: {q.Value}"));
-
-    await context.Response.WriteAsync(response);
-});
-
-
 app.Run();
+
+
+//var configService = app.Services.GetRequiredService<IConfiguration>();
+//var connectionString = configService.GetConnectionString("DefaultConnection:ConnectionStrings");
+
+//app.Run(async (context) =>
+//{
+//    var response = context.Response;
+//    var request = context.Request;
+//    response.ContentType = "text/html; charset=utf-8";
+
+//    //При переходе на главную страницу, считываем всех пользователей
+//    if (request.Path == "/")
+//    {
+//        List<User> users = new List<User>();
+//        using (SqlConnection connection = new SqlConnection(connectionString))
+//        {
+//            await connection.OpenAsync();
+//            SqlCommand command = new SqlCommand("select Id, Name, Age from Users", connection);
+//            using (SqlDataReader reader = await command.ExecuteReaderAsync())
+//            {
+//                if (reader.HasRows)
+//                {
+//                    while (await reader.ReadAsync())
+//                    {
+//                        users.Add(new User(reader.GetString(0), reader.GetString(1), reader.GetInt32(2)));
+//                    }
+//                }
+//            }
+//        }
+//        await response.WriteAsync(GenerateHtmlPage(BuildHtmlTable(users), "All Users from DataBase"));
+//    }
+//    else
+//    {
+//        response.StatusCode = 404;
+//        await response.WriteAsJsonAsync("Page Not Found");
+//    }
+//});
+//app.Run();
+
+//static string GenerateHtmlPage(string body, string header)
+//{
+//    string html = $"""
+//        <!DOCTYPE html>
+//        <html>
+//        <head>
+//            <meta charset="utf-8" />
+//            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" 
+//            integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+//            <title>{header}</title>
+//        </head>
+//        <body>
+//        <div class="container">
+//        <h2 class="d-flex justify-content-center">{header}</h2>
+//        <div class="mt-5"></div>
+//        {body}
+//            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+//            integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+//        </div>
+//        </body>
+//        </html>
+//        """;
+//    return html;
+//}
+//static string ToTable(List<User> users)
+//{
+//    StringBuilder st = new StringBuilder("<table class=\"table\"><tr><th>Id</th><th>Name</th><th>Age</th></tr>");
+//    foreach (User user in users)
+//    {
+//        st.Append($"<tr><td>{user.Id}</td><td>{user.Name}</td><td>{user.Age}</td></tr>");
+//    }
+//    st.Append("</table>");
+//    return st.ToString();
+//}
+
+//static string BuildHtmlTable<T>(IEnumerable<T> collection)
+//{
+//    StringBuilder tableHtml = new StringBuilder();
+//    tableHtml.Append("<table>");
+
+//    PropertyInfo[] properties = typeof(T).GetProperties();
+
+//    tableHtml.Append("<tr>");
+//    foreach (PropertyInfo property in properties)
+//    {
+//        tableHtml.Append($"<th>{property.Name}</th>");
+//    }
+//    tableHtml.Append("</tr>");
+
+//    foreach (T item in collection)
+//    {
+//        tableHtml.Append("<tr>");
+//        foreach (PropertyInfo property in properties)
+//        {
+//            object value = property.GetValue(item);
+//            tableHtml.Append($"<td>{value}</td>");
+//        }
+//        tableHtml.Append("</tr>");
+//    }
+
+//    tableHtml.Append("</table>");
+//    return tableHtml.ToString();
+//}
+//record User(string Id, string Name, int Age)
+//{
+//    public User(string name, int age) : this(Guid.NewGuid().ToString(), name, age) { }
+//}
