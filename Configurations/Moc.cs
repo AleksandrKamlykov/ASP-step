@@ -4,17 +4,22 @@ namespace WebApplication1.Configurations
 {
     public class Moc
     {
-        public static List<Car> cars = new List<Car>();
-
-
-
-        public static List<CarBrand> brands = new List<CarBrand>() { 
-        new CarBrand { Id = Guid.NewGuid(), Name = "Toyota" },
-        new CarBrand { Id = Guid.NewGuid(), Name = "Ford" },
-        new CarBrand { Id = Guid.NewGuid(), Name = "Chevrolet" },
-        new CarBrand { Id = Guid.NewGuid(), Name = "BMW" },
-        new CarBrand { Id = Guid.NewGuid(), Name = "Honda" },
-        new CarBrand { Id = Guid.NewGuid(), Name = "Volkswagen" },
+        
+        public static List<Car> _cars = new List<Car>()
+        {
+            new Car { Id = Guid.NewGuid(), Brand = "Toyota", Model = "Camry", Year = 2020, Price = 25000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Toyota", Model = "Corolla", Year = 2020, Price = 20000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Ford", Model = "Focus", Year = 2020, Price = 22000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Ford", Model = "Fusion", Year = 2020, Price = 25000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Chevrolet", Model = "Cruze", Year = 2020, Price = 23000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Chevrolet", Model = "Malibu", Year = 2020, Price = 28000 },
+            new Car { Id = Guid.NewGuid(), Brand = "BMW", Model = "X5", Year = 2020, Price = 60000 },
+            new Car { Id = Guid.NewGuid(), Brand = "BMW", Model = "X6", Year = 2020, Price = 65000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Honda", Model = "Accord", Year = 2020, Price = 30000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Honda", Model = "Civic", Year = 2020, Price = 25000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Volkswagen", Model = "Golf", Year = 2020, Price = 22000 },
+            new Car { Id = Guid.NewGuid(), Brand = "Volkswagen", Model = "Jetta", Year = 2020, Price = 25000 }
         };
+        
     }
 }

@@ -4,8 +4,30 @@
     <meta charset="utf-8" />
     <title>Registration</title>
     <link rel="stylesheet" href="/css/styles.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
 </head>
 <body>
+<form id="cars-form">
+    <h4>Registration</h4>
+    <input name="id" style="visibility: hidden"/>
+    <label for="brands">
+        <span>Brand</span>
+        <select  name="brand" id="brands">
+            <option value="BMW">BMW</option>
+            <option value="Audi">Audi</option>
+            <option value="Mercedes">Mercedes</option>
+            <option value="Volkswagen">Volkswagen</option>
+            <option value="Toyota">Toyota</option>
+            <option value="Honda">Honda</option>
+            <option value="Ford">Ford</option>
+        </select>
+    </label>
+    <input name="model" placeholder="Model" />
+    <input name="year" type="number" placeholder="Year" />
+    <input name="price" type="number" placeholder="Price" />
+    <button type="submit">Submit</button>
+</form>
+<div id="root"></div>
     <!--content-->
     <!--scripts-->
 

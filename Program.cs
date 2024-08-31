@@ -1,136 +1,149 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using WebApplication1.Context;
 using WebApplication1.Models;
 using WebApplication1.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddDbContext<CarsContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<WeatherService>();
+
 var app = builder.Build();
 
-var userService = new UserCervice();
 var fileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
 var template = fileProvider.GetFileInfo("html/index.html");
-string templateString = await File.ReadAllTextAsync(template.PhysicalPath);
-string contentTag = "<!--content-->";
-string scriptsTag = "<!--scripts-->";
+var templateString = await File.ReadAllTextAsync(template.PhysicalPath);
+
+
+var contentTag = "<!--content-->";
+var scriptsTag = "<!--scripts-->";
+
+var templateCars = templateString.Replace(scriptsTag, "<script src='/js/cars.js'></script>");
 
 
 app.UseStaticFiles();
 
+var scope = app.Services.CreateScope();
+var carContext = scope.ServiceProvider.GetRequiredService<CarsContext>();
+var carService = new CarsService(carContext);
 
-app.Run(async (context) =>
+app.MapGet("/api/cars", async (HttpContext context) =>
 {
-    context.Response.ContentType = "text/html; charset=utf-8";
-    context.Response.SendFileAsync(template);
+    var cars = await carService.GetAllCars();
+    context.Response.StatusCode = 200;
+    await context.Response.WriteAsJsonAsync(cars);
 });
+
+app.MapPost("/api/cars", async (HttpContext context) =>
+{
+    var car = await context.Request.ReadFromJsonAsync<Car>();
+    var res =await carService.AddCar(car);
+    context.Response.StatusCode = 201;
+    await context.Response.WriteAsJsonAsync(res);
+});
+
+app.MapPut("/api/cars", async (HttpContext context) =>
+{
+    var car = await context.Request.ReadFromJsonAsync<Car>();
+    Console.WriteLine(car);
+    var res = await carService.UpdateCar(car);
+    context.Response.StatusCode = 200;
+    await context.Response.WriteAsJsonAsync(res);
+});
+
+app.MapDelete("/api/cars/{carId}", async (HttpContext context) =>
+{
+    var carId = Guid.Parse(context.Request.RouteValues["carId"].ToString());
+     await carService.DeleteCar(carId);
+    context.Response.StatusCode = 200;
+    await context.Response.WriteAsJsonAsync(carId);
+});
+
+app.MapGet("/api/cars/{carId}", async (HttpContext context) =>
+{
+    var carId = Guid.Parse(context.Request.RouteValues["carId"].ToString());
+    var car = await carService.GetCarById(carId);
+    context.Response.StatusCode = 200;
+    await context.Response.WriteAsJsonAsync(car);
+});
+
+app.MapGet("/", async (HttpContext context) =>
+{
+    await context.Response.WriteAsync(templateCars);
+});
+
+
+// -------- STATIS FILES --------
+var fileProviderFiles = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files"));
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = fileProviderFiles,
+    RequestPath = "/files"
+});
+
+// Define a route to handle GET requests for HTML files
+app.MapGet("/files/{*filePath}", async (HttpContext context) =>
+{
+    var filePath = context.Request.Path.Value.TrimStart('/');
+    var fullPath = Path.Combine(fileProvider.Root, filePath);
+
+    if (File.Exists(fullPath) && Path.GetExtension(fullPath).Equals(".html", StringComparison.OrdinalIgnoreCase))
+    {
+        var fileContent = await File.ReadAllTextAsync(fullPath);
+        context.Response.ContentType = "text/html";
+        await context.Response.WriteAsync(fileContent);
+    }
+    else
+    {
+        context.Response.StatusCode = 404;
+        var errorFilePath = Path.Combine(fileProvider.Root, "404.html");
+        if (File.Exists(errorFilePath))
+        {
+            var errorContent = await File.ReadAllTextAsync(errorFilePath);
+            context.Response.ContentType = "text/html";
+            await context.Response.WriteAsync(errorContent);
+        }
+        else
+        {
+            await context.Response.WriteAsync("404 Not Found");
+        }
+    }
+});
+
+// -----Weather -----
+
+app.MapGet("/weather", async (HttpContext context) =>
+{
+    var filePath = Path.Combine(fileProvider.Root, "html","weather.html");
+    var fileContent = await File.ReadAllTextAsync(filePath);
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(fileContent);
+});
+
+app.MapGet("/api/weather/{city}", async (HttpContext context, WeatherService weatherService, string city) =>
+{
+    var weatherData = await weatherService.GetWeatherDataAsync(city);
+    if (weatherData != null)
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(weatherData);
+    }
+    else
+    {
+        context.Response.StatusCode = 404;
+        await context.Response.WriteAsync("City not found");
+    }
+});
+
+
 app.Run();
-
-
-//var configService = app.Services.GetRequiredService<IConfiguration>();
-//var connectionString = configService.GetConnectionString("DefaultConnection:ConnectionStrings");
-
-//app.Run(async (context) =>
-//{
-//    var response = context.Response;
-//    var request = context.Request;
-//    response.ContentType = "text/html; charset=utf-8";
-
-//    //При переходе на главную страницу, считываем всех пользователей
-//    if (request.Path == "/")
-//    {
-//        List<User> users = new List<User>();
-//        using (SqlConnection connection = new SqlConnection(connectionString))
-//        {
-//            await connection.OpenAsync();
-//            SqlCommand command = new SqlCommand("select Id, Name, Age from Users", connection);
-//            using (SqlDataReader reader = await command.ExecuteReaderAsync())
-//            {
-//                if (reader.HasRows)
-//                {
-//                    while (await reader.ReadAsync())
-//                    {
-//                        users.Add(new User(reader.GetString(0), reader.GetString(1), reader.GetInt32(2)));
-//                    }
-//                }
-//            }
-//        }
-//        await response.WriteAsync(GenerateHtmlPage(BuildHtmlTable(users), "All Users from DataBase"));
-//    }
-//    else
-//    {
-//        response.StatusCode = 404;
-//        await response.WriteAsJsonAsync("Page Not Found");
-//    }
-//});
-//app.Run();
-
-//static string GenerateHtmlPage(string body, string header)
-//{
-//    string html = $"""
-//        <!DOCTYPE html>
-//        <html>
-//        <head>
-//            <meta charset="utf-8" />
-//            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet" 
-//            integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
-//            <title>{header}</title>
-//        </head>
-//        <body>
-//        <div class="container">
-//        <h2 class="d-flex justify-content-center">{header}</h2>
-//        <div class="mt-5"></div>
-//        {body}
-//            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
-//            integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
-//        </div>
-//        </body>
-//        </html>
-//        """;
-//    return html;
-//}
-//static string ToTable(List<User> users)
-//{
-//    StringBuilder st = new StringBuilder("<table class=\"table\"><tr><th>Id</th><th>Name</th><th>Age</th></tr>");
-//    foreach (User user in users)
-//    {
-//        st.Append($"<tr><td>{user.Id}</td><td>{user.Name}</td><td>{user.Age}</td></tr>");
-//    }
-//    st.Append("</table>");
-//    return st.ToString();
-//}
-
-//static string BuildHtmlTable<T>(IEnumerable<T> collection)
-//{
-//    StringBuilder tableHtml = new StringBuilder();
-//    tableHtml.Append("<table>");
-
-//    PropertyInfo[] properties = typeof(T).GetProperties();
-
-//    tableHtml.Append("<tr>");
-//    foreach (PropertyInfo property in properties)
-//    {
-//        tableHtml.Append($"<th>{property.Name}</th>");
-//    }
-//    tableHtml.Append("</tr>");
-
-//    foreach (T item in collection)
-//    {
-//        tableHtml.Append("<tr>");
-//        foreach (PropertyInfo property in properties)
-//        {
-//            object value = property.GetValue(item);
-//            tableHtml.Append($"<td>{value}</td>");
-//        }
-//        tableHtml.Append("</tr>");
-//    }
-
-//    tableHtml.Append("</table>");
-//    return tableHtml.ToString();
-//}
-//record User(string Id, string Name, int Age)
-//{
-//    public User(string name, int age) : this(Guid.NewGuid().ToString(), name, age) { }
-//}

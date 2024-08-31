@@ -8,12 +8,8 @@ namespace WebApplication1.Configurations
     {
         public void Configure(EntityTypeBuilder<Car> builder)
         {
-    builder.HasOne(c => c.Brand)
-                .WithMany(b => b.Cars)
-                .HasForeignKey(c => c.BrandId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            builder.HasData(Moc.cars);
+            
+            builder.HasData(Moc._cars);
         }
 
     }

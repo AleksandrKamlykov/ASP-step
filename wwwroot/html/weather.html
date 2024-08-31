@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <script>
+        async function fetchWeather(city) {
+            const response = await fetch(`/api/weather/${city}`);
+            const data = await response.json();
+            if (response.ok) {
+                document.getElementById('weather').innerText = JSON.stringify(data, null, 2);
+            } else {
+                document.getElementById('weather').innerText = 'City not found';
+            }
+        }
+
+        function searchWeather(event) {
+            event.preventDefault();
+            const city = document.getElementById('city').value;
+            fetchWeather(city);
+        }
+    </script>
+</head>
+<body>
+<h1>Weather App</h1>
+<form onsubmit="searchWeather(event)">
+    <input type="text" id="city" placeholder="Enter city name">
+    <button type="submit">Search</button>
+</form>
+<h2>Popular Cities</h2>
+<ul>
+    <li><a href="#" onclick="fetchWeather('Dnipro')">Dnipro</a></li>
+    <li><a href="#" onclick="fetchWeather('Kyiv')">Kyiv</a></li>
+    <li><a href="#" onclick="fetchWeather('London')">London</a></li>
+    <li><a href="#" onclick="fetchWeather('Sydney')">Sydney</a></li>
+</ul>
+<pre id="weather"></pre>
+</body>
+</html>

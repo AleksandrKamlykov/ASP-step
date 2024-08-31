@@ -1,21 +1,18 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Numerics;
 using WebApplication1.Configurations;
 using WebApplication1.Models;
 
 namespace WebApplication1.Context
 {
-    public class CarsContext: DbContext
+    public class CarsContext : DbContext
     {
-
-
 
         private readonly IConfiguration _configuration;
 
         public CarsContext()
         {
-            //Database.EnsureDeleted();
-            //Database.EnsureCreated();
+            Database.EnsureDeleted();
+            Database.EnsureCreated();
         }
 
 
@@ -44,13 +41,11 @@ namespace WebApplication1.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new CarConfiguration());
-            modelBuilder.ApplyConfiguration(new MatchConfiguration());
 
             base.OnModelCreating(modelBuilder);
         }
 
         public DbSet<Car> Cars { get; set; }
-        public DbSet<CarBrand> CarBrands { get; set; }
 
     }
 }
