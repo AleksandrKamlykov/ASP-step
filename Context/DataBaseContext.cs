@@ -4,19 +4,19 @@ using WebApplication1.Models;
 
 namespace WebApplication1.Context
 {
-    public class CarsContext : DbContext
+    public class DataBaseContext : DbContext
     {
 
         private readonly IConfiguration _configuration;
 
-        public CarsContext()
+        public DataBaseContext()
         {
             Database.EnsureDeleted();
             Database.EnsureCreated();
         }
 
 
-        public CarsContext(IConfiguration configuration)
+        public DataBaseContext(IConfiguration configuration)
         {
 
             _configuration = configuration;
@@ -40,12 +40,13 @@ namespace WebApplication1.Context
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfiguration(new CarConfiguration());
+            modelBuilder.ApplyConfiguration(new CurrencyConfiguration());
+            modelBuilder.ApplyConfiguration(new BookConfiguration());
 
             base.OnModelCreating(modelBuilder);
         }
-
-        public DbSet<Car> Cars { get; set; }
-
+        
+        public DbSet<Book> Books { get; set; }
+        public DbSet<Currency> Currencies { get; set; }
     }
 }

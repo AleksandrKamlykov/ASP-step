@@ -1,0 +1,23 @@
+<div>
+    <h1>Exchange</h1>
+    <form id="exchange-form" method="get" action="/api/exchange">
+        <div class="mb-3">
+            <label for="from" class="form-label">From</label>
+            <select class="form-select" id="from" name="fromCc" required>
+          
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="to" class="form-label">To</label>
+            <select class="form-select" id="to" name="toCc" required>
+           
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="amount" class="form-label">Amount</label>
+            <input type="number" class="form-control" id="amount" name="amount" required value="1">
+        </div>
+        <button type="submit" class="btn btn-primary">Exchange</button>
+    </form>
+    <div id="result"></div>
+</div>

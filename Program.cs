@@ -1,149 +1,139 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.FileProviders;
-using System.Reflection;
+
 using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using WebApplication1;
 using WebApplication1.Context;
+using WebApplication1.Middlewares;
 using WebApplication1.Models;
-using WebApplication1.Services;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddDbContext<CarsContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddHttpClient();
-builder.Services.AddSingleton<WeatherService>();
+builder.Services.AddDbContext<DataBaseContext>(options =>
+   options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
-
-var fileProvider = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"));
-var template = fileProvider.GetFileInfo("html/index.html");
-var templateString = await File.ReadAllTextAsync(template.PhysicalPath);
-
-
-var contentTag = "<!--content-->";
-var scriptsTag = "<!--scripts-->";
-
-var templateCars = templateString.Replace(scriptsTag, "<script src='/js/cars.js'></script>");
-
-
-app.UseStaticFiles();
-
 var scope = app.Services.CreateScope();
-var carContext = scope.ServiceProvider.GetRequiredService<CarsContext>();
-var carService = new CarsService(carContext);
+var carContext = scope.ServiceProvider.GetRequiredService<DataBaseContext>();
 
-app.MapGet("/api/cars", async (HttpContext context) =>
-{
-    var cars = await carService.GetAllCars();
-    context.Response.StatusCode = 200;
-    await context.Response.WriteAsJsonAsync(cars);
-});
+var usersAuth = new Dictionary<string, string>();
 
-app.MapPost("/api/cars", async (HttpContext context) =>
-{
-    var car = await context.Request.ReadFromJsonAsync<Car>();
-    var res =await carService.AddCar(car);
-    context.Response.StatusCode = 201;
-    await context.Response.WriteAsJsonAsync(res);
-});
 
-app.MapPut("/api/cars", async (HttpContext context) =>
-{
-    var car = await context.Request.ReadFromJsonAsync<Car>();
-    Console.WriteLine(car);
-    var res = await carService.UpdateCar(car);
-    context.Response.StatusCode = 200;
-    await context.Response.WriteAsJsonAsync(res);
-});
+var htmlTemplate = await File.ReadAllTextAsync(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "html", "index.html"));
 
-app.MapDelete("/api/cars/{carId}", async (HttpContext context) =>
-{
-    var carId = Guid.Parse(context.Request.RouteValues["carId"].ToString());
-     await carService.DeleteCar(carId);
-    context.Response.StatusCode = 200;
-    await context.Response.WriteAsJsonAsync(carId);
-});
+app.UseMiddleware<IpAddressMiddleware>();
+app.UseMiddleware<IpAccessMiddleware>();
+app.UseMiddleware<AuthMiddleware>(usersAuth);
 
-app.MapGet("/api/cars/{carId}", async (HttpContext context) =>
+app.MapGet("/",async (context) =>
 {
-    var carId = Guid.Parse(context.Request.RouteValues["carId"].ToString());
-    var car = await carService.GetCarById(carId);
-    context.Response.StatusCode = 200;
-    await context.Response.WriteAsJsonAsync(car);
-});
+   context.Response.ContentType = "text/html";
 
-app.MapGet("/", async (HttpContext context) =>
-{
-    await context.Response.WriteAsync(templateCars);
+
+   StringBuilder content = new StringBuilder(htmlTemplate);
+   
+   await context.Response.WriteAsync(content.ToString());
 });
 
 
-// -------- STATIS FILES --------
-var fileProviderFiles = new PhysicalFileProvider(Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "files"));
-
-app.UseStaticFiles(new StaticFileOptions
+app.MapGet("api/currencies",async (context) =>
 {
-    FileProvider = fileProviderFiles,
-    RequestPath = "/files"
+   var currencies = await carContext.Currencies.ToListAsync();
+   
+   context.Response.ContentType = "application/json; charset=utf-8";
+   await context.Response.WriteAsJsonAsync(currencies);
 });
 
-// Define a route to handle GET requests for HTML files
-app.MapGet("/files/{*filePath}", async (HttpContext context) =>
+app.MapGet("api/currencies/calcualte",async (context) =>
 {
-    var filePath = context.Request.Path.Value.TrimStart('/');
-    var fullPath = Path.Combine(fileProvider.Root, filePath);
-
-    if (File.Exists(fullPath) && Path.GetExtension(fullPath).Equals(".html", StringComparison.OrdinalIgnoreCase))
-    {
-        var fileContent = await File.ReadAllTextAsync(fullPath);
-        context.Response.ContentType = "text/html";
-        await context.Response.WriteAsync(fileContent);
-    }
-    else
-    {
-        context.Response.StatusCode = 404;
-        var errorFilePath = Path.Combine(fileProvider.Root, "404.html");
-        if (File.Exists(errorFilePath))
-        {
-            var errorContent = await File.ReadAllTextAsync(errorFilePath);
-            context.Response.ContentType = "text/html";
-            await context.Response.WriteAsync(errorContent);
-        }
-        else
-        {
-            await context.Response.WriteAsync("404 Not Found");
-        }
-    }
+   var currencies = await carContext.Currencies.ToListAsync();
+   var currencyFrom = currencies.FirstOrDefault(c => c.Cc == context.Request.Query["fromCc"]);
+   var currencyTo = currencies.FirstOrDefault(c => c.Cc == context.Request.Query["toCc"]);
+   var amount = float.Parse(context.Request.Query["amount"]);
+   
+   context.Response.ContentType = "application/json";
+   await context.Response.WriteAsJsonAsync(new {result = amount * currencyFrom.Rate / currencyTo.Rate, currencyTo.Cc, currencyTo.Text});
 });
 
-// -----Weather -----
-
-app.MapGet("/weather", async (HttpContext context) =>
+app.MapGet("api/books",async (context) =>
 {
-    var filePath = Path.Combine(fileProvider.Root, "html","weather.html");
-    var fileContent = await File.ReadAllTextAsync(filePath);
-    context.Response.ContentType = "text/html";
-    await context.Response.WriteAsync(fileContent);
+   
+   if(context.Request.Query.ContainsKey("category") && !string.IsNullOrEmpty(context.Request.Query["category"]))
+   {
+      var category = context.Request.Query["category"];
+      var books = await carContext.Books.Where(b => b.Category.ToLower().Contains(category.ToString().ToLower())).ToListAsync();
+      context.Response.ContentType = "application/json; charset=utf-8";
+      await context.Response.WriteAsJsonAsync(books);
+      return;
+   }
+   else
+   {
+      var books = await carContext.Books.ToListAsync();
+   
+      context.Response.ContentType = "application/json; charset=utf-8";
+      await context.Response.WriteAsJsonAsync(books); 
+   }
+   
+
 });
 
-app.MapGet("/api/weather/{city}", async (HttpContext context, WeatherService weatherService, string city) =>
+app.MapGet("/home",async (context) =>
 {
-    var weatherData = await weatherService.GetWeatherDataAsync(city);
-    if (weatherData != null)
-    {
-        context.Response.ContentType = "application/json";
-        await context.Response.WriteAsJsonAsync(weatherData);
-    }
-    else
-    {
-        context.Response.StatusCode = 404;
-        await context.Response.WriteAsync("City not found");
-    }
+   context.Response.ContentType = "text/html";
+   var page = new Page();
+   page.AddHeader("header.html");
+   
+   await context.Response.WriteAsync(page.GetContent());
 });
 
+app.MapGet("/exchange",async (context) =>
+{
+   context.Response.ContentType = "text/html";
+   var page = new Page();
+   page.AddHeader("header.html");
+   page.AddContent("currency.html");
+   page.AddScripts("currency.js");
+   
+   await context.Response.WriteAsync(page.GetContent());
+});
+
+app.MapGet("/books",async (context) =>
+{
+   context.Response.ContentType = "text/html";
+   var page = new Page();
+   page.AddHeader("header.html");
+   page.AddContent("books.html");
+   page.AddScripts("books.js");
+   
+   await context.Response.WriteAsync(page.GetContent());
+});
+
+app.MapGet("/auth",async (context) =>
+{
+   context.Response.ContentType = "text/html";
+   await context.Response.SendFileAsync(Path.Combine(Directory.GetCurrentDirectory(),"wwwroot", "html", "401.html"));
+});
+
+app.MapGet("/api/auth",async (context) =>
+{
+ var name = context.Request.Query["name"];
+   var email = context.Request.Query["email"];
+   
+   if (name == "admin" && email == "admin@email.com")
+   {
+       var key = Guid.NewGuid().ToString();
+       usersAuth.Add(key, name);
+       context.Response.Cookies.Append("AuthCookie", key, new CookieOptions
+       {
+           HttpOnly = true,
+           Secure = true,
+           SameSite = SameSiteMode.Strict
+       });
+       context.Response.StatusCode = 200;
+       context.Response.Redirect("/home");
+   }
+   else
+   {
+       context.Response.StatusCode = 401;
+   }
+});
 
 app.Run();
