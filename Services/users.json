@@ -1,17 +1,51 @@
 [
   {
+    "Id": "d3b07384-d9a1-4d3b-8a1d-9a1d4d3b0738",
     "Name": "John Doe",
-    "Email": " [email protected]",
-    "Phone": "1234567890"
+    "Email": "john.doe@example.com",
+    "Phone": "555-1234"
   },
   {
-    "Name": "Jack Doe",
-    "Email": "email@example.com",
-    "Phone": "0987654321"
+    "Id": "e4b07384-d9a1-4d3b-8a1d-9a1d4d3b0739",
+    "Name": "Jane Smith",
+    "Email": "jane.smith@example.com",
+    "Phone": "555-5678"
   },
   {
-    "Name": "Bob",
-    "Email": "bob@example.com",
-    "Phone": "\u002B380000000000"
+    "Id": "f5b07384-d9a1-4d3b-8a1d-9a1d4d3b0740",
+    "Name": "Alice Johnson",
+    "Email": "alice.johnson@example.com",
+    "Phone": "555-8765"
+  },
+  {
+    "Id": "a6b07384-d9a1-4d3b-8a1d-9a1d4d3b0741",
+    "Name": "Bob Brown",
+    "Email": "bob.brown@example.com",
+    "Phone": "555-4321"
+  },
+  {
+    "Id": "b7b07384-d9a1-4d3b-8a1d-9a1d4d3b0742",
+    "Name": "Charlie Davis",
+    "Email": "charlie.davis@example.com",
+    "Phone": "555-6789"
+  },
+  {
+    "Id": "c8b07384-d9a1-4d3b-8a1d-9a1d4d3b0743",
+    "Name": "Diana Evans",
+    "Email": "diana.evans@example.com",
+    "Phone": "555-9876"
+  },
+  {
+    "Id": "d9b07384-d9a1-4d3b-8a1d-9a1d4d3b0744",
+    "Name": "Ethan Foster",
+    "Email": "ethan.foster@example.com",
+    "Phone": "555-3456"
+  },
+  {
+    "Id": "e0b07384-d9a1-4d3b-8a1d-9a1d4d3b0745",
+    "Name": "Fiona Green",
+    "Email": "fiona.green@example.com",
+    "Phone": "555-6543"
   }
 ]
+
